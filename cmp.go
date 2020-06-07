@@ -1,8 +1,9 @@
 package xtest
 
 import (
-	"fmt"
+	"bufio"
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -27,13 +28,26 @@ func CmpIfErr(t *testing.T, err error, old, actual, new interface{}, msg string)
 // Note: avoid testdata/%s when giving the filename
 func CmpWithGoldenFile(t *testing.T, got []byte, goldenFilename, msg string) {
 	t.Helper()
-
-	want, err := ioutil.ReadFile(fmt.Sprintf("testdata/%s", goldenFilename))
-	if err != nil {
-		t.Fatalf("Error trying to read the goldenFile: %s", err)
-	}
-
+	want := ReadGoldenFile(t, goldenFilename)
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Errorf("%s mismatch (-want +got): %s", msg, diff)
 	}
+}
+
+func ReaderFromGoldenFile(t *testing.T, filename string) (*bufio.Reader, func() error) {
+	t.Helper()
+	f, err := os.Open("testdata/" + filename)
+	if err != nil {
+		t.Fatalf("Error trying to open the goldenFile: %s", err)
+	}
+	return bufio.NewReader(f), f.Close
+}
+
+func ReadGoldenFile(t *testing.T, filename string) []byte {
+	t.Helper()
+	bytes, err := ioutil.ReadFile("testdata/" + filename)
+	if err != nil {
+		t.Fatalf("Error trying to read the goldenFile: %s", err)
+	}
+	return bytes
 }
